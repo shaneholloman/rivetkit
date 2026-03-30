@@ -18,11 +18,11 @@
 	},
 	"dependencies": {
 		"@rivet-dev/agent-os-core": "workspace:*",
-		"@rivet-dev/agent-os-sandbox": "link:../../packages/sandbox",
+		"@rivet-dev/agent-os-sandbox": "link:../../registry/tool/sandbox",
 		"sandbox-agent": "^0.4.2",
-		"@rivet-dev/agent-os-common": "link:../../../agent-os-registry/software/common",
-		"@rivet-dev/agent-os-git": "link:../../../agent-os-registry/software/git",
-		"@rivet-dev/agent-os-pi": "link:../../packages/agent-pi",
+		"@rivet-dev/agent-os-common": "link:../../registry/software/common",
+		"@rivet-dev/agent-os-git": "link:../../registry/software/git",
+		"@rivet-dev/agent-os-pi": "link:../../registry/agent/pi",
 		"zod": "^3.25.0"
 	},
 	"devDependencies": {

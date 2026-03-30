@@ -1,6 +1,10 @@
 packages:
   - packages/*
   - examples/*
+  - registry/software/*
+  - registry/agent/*
+  - registry/file-system/*
+  - registry/tool/*
 
 ignoredBuiltDependencies:
   - '@clerk/shared'
