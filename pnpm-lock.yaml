@@ -38,9 +38,15 @@ importers:
       '@rivet-dev/agent-os-pi':
         specifier: link:../../registry/agent/pi
         version: link:../../registry/agent/pi
+      '@rivet-dev/agent-os-s3':
+        specifier: link:../../registry/file-system/s3
+        version: link:../../registry/file-system/s3
       '@rivet-dev/agent-os-sandbox':
         specifier: link:../../registry/tool/sandbox
         version: link:../../registry/tool/sandbox
+      '@rivet-dev/agent-os-sqlite3':
+        specifier: link:../../registry/software/sqlite3
+        version: link:../../registry/software/sqlite3
       sandbox-agent:
         specifier: ^0.4.2
         version: 0.4.2(zod@3.25.76)
