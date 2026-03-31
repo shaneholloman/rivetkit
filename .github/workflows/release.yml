@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to publish (e.g. 0.2.0, 0.2.0-rc.1)"
+        description: "Version to publish (e.g. 0.1.0, 0.1.0-rc.1)"
         required: true
         type: string
       npm-tag:
@@ -31,30 +31,56 @@ jobs:
         with:
           ref: v${{ inputs.version }}
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
           registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm turbo build
 
       - name: Type check
-        run: npm run check-types
+        run: pnpm turbo check-types
 
       - name: Publish to npm
         run: |
-          VERSION="${{ inputs.version }}"
-          NAME=$(jq -r .name package.json)
-          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
-            echo "⏭ ${NAME}@${VERSION} already published, skipping."
-          else
+          FAILURES=""
+
+          # Publish workspace packages (skip root, skip registry/software/)
+          for dir in $(pnpm -r ls --json --depth -1 | jq -r '.[] | select(.private != true) | .path'); do
+            # Skip the root package
+            if [ "$dir" = "$(pwd)" ]; then
+              continue
+            fi
+            # Skip registry/software/ packages (published separately via make publish)
+            if [[ "$dir" == *"/registry/software/"* ]]; then
+              echo "⏭ Skipping software package: $(jq -r .name "$dir/package.json")"
+              continue
+            fi
+            NAME=$(jq -r .name "$dir/package.json")
+            VERSION="${{ inputs.version }}"
+            if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+              echo "⏭ ${NAME}@${VERSION} already published, skipping."
+              continue
+            fi
             echo "Publishing ${NAME}@${VERSION}..."
-            npm publish --access public --tag ${{ inputs.npm-tag }}
+            if ! (cd "$dir" && pnpm publish --access public --tag ${{ inputs.npm-tag }} --no-git-checks); then
+              FAILURES="${FAILURES} ${NAME}"
+            fi
+          done
+
+          if [ -n "$FAILURES" ]; then
+            echo "::error::Failed to publish:${FAILURES}"
+            exit 1
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

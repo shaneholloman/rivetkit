@@ -87,13 +87,24 @@ function parseArgs(): { version: string; tag: "latest" | "rc"; noGitChecks: bool
 
 // ── Update version ──
 
+function findPublishablePackages(): string[] {
+	const output = run("pnpm -r ls --json --depth -1");
+	const packages = JSON.parse(output) as Array<{ path: string; private?: boolean }>;
+	return packages
+		.filter((p) => !p.private && p.path !== ROOT && !p.path.includes("/registry/software/"))
+		.map((p) => join(p.path, "package.json"));
+}
+
 function setVersion(version: string) {
-	const file = join(ROOT, "packages/core/package.json");
-	const content = readFileSync(file, "utf-8");
-	const pkg = JSON.parse(content);
-	pkg.version = version;
-	const indent = content.match(/^(\s+)"/m)?.[1] ?? "\t";
-	writeFileSync(file, JSON.stringify(pkg, null, indent) + "\n");
+	const files = findPublishablePackages();
+	for (const file of files) {
+		const content = readFileSync(file, "utf-8");
+		const pkg = JSON.parse(content);
+		pkg.version = version;
+		const indent = content.match(/^(\s+)"/m)?.[1] ?? "\t";
+		writeFileSync(file, JSON.stringify(pkg, null, indent) + "\n");
+		console.log(`  ${pkg.name} → ${version}`);
+	}
 }
 
 // ── Main ──
@@ -122,13 +133,17 @@ async function main() {
 		console.log("\x1b[33m⚠ Skipping git checks (--no-git-checks)\x1b[0m");
 	}
 
-	const corePkg = JSON.parse(readFileSync(join(ROOT, "packages/core/package.json"), "utf-8"));
+	const pkgFiles = findPublishablePackages();
+	const pkgNames = pkgFiles.map((f) => JSON.parse(readFileSync(f, "utf-8")).name as string);
 
 	console.log(`\n\x1b[1mRelease Plan\x1b[0m`);
-	console.log(`  Package:  \x1b[36m${corePkg.name}\x1b[0m`);
 	console.log(`  Version:  \x1b[36m${version}\x1b[0m`);
 	console.log(`  NPM tag:  \x1b[36m${tag}\x1b[0m`);
 	console.log(`  Git tag:  \x1b[36mv${version}\x1b[0m`);
+	console.log(`  Packages: \x1b[36m${pkgNames.length}\x1b[0m`);
+	for (const name of pkgNames) {
+		console.log(`    - ${name}`);
+	}
 	console.log();
 
 	if (!(await confirm("Proceed?"))) {
